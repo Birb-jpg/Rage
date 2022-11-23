@@ -1,3 +1,6 @@
+--Created by Birb#7304
+--https://v3rmillion.net/member.php?action=profile&uid=783024
+
 local AntiCheatHook
 AntiCheatHook = hookmetamethod(game,"__namecall",newcclosure(function(Self,...)
     local Args = {...}
@@ -21,6 +24,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
+
+local Target = nil
+
+
 local TC2 = {}
 TC2.Birb = {}
 TC2.Birb.Toggles = {
@@ -177,43 +184,7 @@ ValueChanger(TC2.GetFramework("Client").chargeleft,"Value",30,"Charge")
 --ValueChanger(TC2.GetFramework("Weapons").chargetick,"Value",tick()+50,"Testing")
 
 local chegg = 0
-local OldNameCall
-OldNameCall = hookmetamethod(game,"__namecall",newcclosure(function(Self,...)
-    local Method = getnamecallmethod()
-    local Args = {...}
-    if Method == "FireServer" and not checkcaller() then
-        if typeof(Self) == "Instance" then
-            if Self.IsA(Self,"RemoteEvent") then
-                if Self.Name == "DeployBuilding" and TC2.Birb.Toggles.Level3 == true then
-                    return Self.FireServer(Self,Args[1],Args[2],true,3,216,200,200,0,0,Args[10])
-                end
-                if Self.Name == "ReplicateDot" and TC2.Birb.Toggles.Dot == true then
-                    return
-                end
-                if Self.Name == "ControlTurn" and TC2.Birb.Toggles.AntiHead == true then
-                    return Self.FireServer(Self,math.rad(160))
-                end
-                if Self.Name == "IMISSED" and TC2.Birb.Toggles.SelfDMG == true then
-                    return
-                end
-                if Self.Name == "Undisguise" and TC2.Birb.Toggles.Undisguise == true then
-                    return
-                end
-            end
-        end 
-    end
-   if Method == "Raycast" and Self == workspace and not checkcaller() then
-        if Target ~= nil and Target.FindFirstChild(Target,"Head") and TC2.Birb.Toggles.SilentAim == true then
-            if Args[3].IgnoreWater == true then
-                print(Target)
-                Args[1] = Camera.CFrame.Position
-                Args[2] = Target.Head.Position - Camera.CFrame.Position
-                return OldNameCall(Self,unpack(Args))
-            end
-        end
-    end
-    return OldNameCall(Self,...)
-end))
+
 
 local OldIndex
 OldIndex = hookmetamethod(game,"__index",newcclosure(function(Self,Key)
@@ -241,57 +212,58 @@ FovCircle.Position = UIS:GetMouseLocation()
 FovCircle.Visible = false
 FovCircle.Color = Color3.fromRGB(255, 255, 255)
 
+local GetClosestToMouse = function(TargetPart)
+    print(TC2.Birb.Toggles.FOV and TC2.Birb.Changes.FOVRadius)
 
-local PointInFOV = function(Vec3Pos,Radius)
-	local Point,Visiblity = Camera:WorldToViewportPoint(Vec3Pos)
+    local MaxDistance = (TC2.Birb.Toggles.FOV and TC2.Birb.Changes.FOVRadius or nil)
+	local Closest = 9e9
+	local ToRet
+	for i,v in next, Players:GetPlayers() do
+		if v and v.Character and v ~= Player and (v.Team ~= Player.Team or v.Neutral == true) then
+			--print("team")
+			local ToTarget = TargetPart or "Head"
+			local Selected = v.Character:FindFirstChild(ToTarget)
+			if Selected then
+				--print("seletcted")
 
-    local FlatPoint = Vector2.new(Point.X,Point.Y)
-    local Mag = (FlatPoint - UIS:GetMouseLocation()).Magnitude
-    return (Point.X - UIS:GetMouseLocation().X)^2 + (Point.Y - UIS:GetMouseLocation().Y)^2 < Radius^2
-end
-local ClosestToMouse = function(Points)
-    local ToRet = nil
-    local Range = math.huge
-    for i,Point in next, Points do
-        local PointPos, PointVis = Camera:WorldToViewportPoint(Point.Position)
-        local FlatPos = Vector2.new(PointPos.X,PointPos.Y)
-        local Mag = (FlatPos - UIS:GetMouseLocation()).Magnitude
-        if Mag < Range then
-            Range = Mag
-            ToRet = Point
-        end
-    end
-    return ToRet
-end
-
-local Targeter = function(Bodypart)
-    if Bodypart == nil then Bodypart = "Head" end
-    local PotHTargets = {}
-    for _,PTarget in next, Players:GetPlayers() do
-        if PTarget ~= Player and PTarget.Team ~= Player.Team and Player:FindFirstChild("Dead") and Player.Dead.Value == false then
-            local CTarget = PTarget.Character
-            if CTarget and CTarget:FindFirstChild(Bodypart) then
-                local HTarget = CTarget:FindFirstChild(Bodypart)
-                if TC2.Birb.Toggles.FOV == true then
-                    if PointInFOV(HTarget.CFrame.Position,TC2.Birb.Changes.FOVRadius) == false then
-                        return
+				local SelectedToViewPort,IsVisible = Camera:WorldToViewportPoint(Selected.Position)
+				local Magnitude = (UIS:GetMouseLocation() - Vector2.new(SelectedToViewPort.X,SelectedToViewPort.Y)).Magnitude
+				if Magnitude < Closest then
+					Closest = Magnitude
+					ToRet = v.Character
+					if MaxDistance ~= nil then
+						if MaxDistance >= Magnitude then
+							Closest = Magnitude
+							ToRet = v.Character
+						else
+							ToRet = nil
+						end
+					end
+                    if TC2.Birb.Toggles.VisFOV == true then
+                        if IsVisible == true then
+                            Closest = Magnitude
+							ToRet = v.Character
+						else
+							ToRet = nil
+                        end
                     end
-                end
-                if TC2.Birb.Toggles.Vis == true and Player.Character then
-                    local Blocking = Camera:GetPartsObscuringTarget({HTarget.CFrame.Position}, {Player.Character,CTarget,workspace.Terrain,Camera,workspace:WaitForChild('Map').Ignore})
-                    if #Blocking > 0 then return end
-                end
-                local Pos, Vis = Camera:WorldToViewportPoint(HTarget.CFrame.Position)
-                if TC2.Birb.Toggles.VisFOV == true then
-                    if Vis == false then return end
-                end
-                table.insert(PotHTargets,HTarget)
-            end
-        end
-    end
-    return ClosestToMouse(PotHTargets)
+                    local Map = workspace:FindFirstChild("Map")
+                    if TC2.Birb.Toggles.Vis == true and Selected and Map and Map:FindFirstChild("Ignore") then
+                        if #Camera:GetPartsObscuringTarget({Selected.CFrame.Position}, Map.Ignore:GetChildren()) <= 0 then
+                            Closest = Magnitude
+							ToRet = v.Character
+                        else
+                            ToRet = nil
+                        end
+                    end
+				end
+			end
+		end
+	end
+	return ToRet,Closest
 end
-local Target = nil
+
+
 RunService:BindToRenderStep("Runeasd", 1, function()
     --[[if Player.Character ~= nil and Player.Character:FindFirstChild("Dead") then
         local Dead = Player.Character:FindFirstChild("Dead")
@@ -321,15 +293,46 @@ RunService:BindToRenderStep("Runeasd", 1, function()
         end
     end
     FovCircle.Position = UIS:GetMouseLocation()
-    local HTarget = Targeter()
-    if HTarget then
-        Target = HTarget.Parent
-    else
-        Target = nil
-    end
+    Target = GetClosestToMouse()
     --warn(Target)
 end)
-
+local OldNameCall
+OldNameCall = hookmetamethod(game,"__namecall",newcclosure(function(Self,...)
+    local Method = getnamecallmethod()
+    local Args = {...}
+    if Method == "FireServer" and not checkcaller() then
+        if typeof(Self) == "Instance" then
+            if Self.IsA(Self,"RemoteEvent") then
+                if Self.Name == "DeployBuilding" and TC2.Birb.Toggles.Level3 == true then
+                    return Self.FireServer(Self,Args[1],Args[2],true,3,216,200,200,0,0,Args[10])
+                end
+                if Self.Name == "ReplicateDot" and TC2.Birb.Toggles.Dot == true then
+                    return
+                end
+                if Self.Name == "ControlTurn" and TC2.Birb.Toggles.AntiHead == true then
+                    return Self.FireServer(Self,math.rad(160))
+                end
+                if Self.Name == "IMISSED" and TC2.Birb.Toggles.SelfDMG == true then
+                    return
+                end
+                if Self.Name == "Undisguise" and TC2.Birb.Toggles.Undisguise == true then
+                    return
+                end
+            end
+        end 
+    end
+   if Method == "Raycast" and not checkcaller() then
+        if Target ~= nil and Target.FindFirstChild(Target,"Head") and TC2.Birb.Toggles.SilentAim == true then
+            if Args[3].IgnoreWater == true then
+                print(Target)
+                Args[1] = Camera.CFrame.Position
+                Args[2] = Target.Head.CFrame.Position - Camera.CFrame.Position
+                return OldNameCall(Self,unpack(Args))
+            end
+        end
+    end
+    return OldNameCall(Self,...)
+end))
 
 local Mercury = loadstring(game:HttpGet("https://raw.githubusercontent.com/deeeity/mercury-lib/master/src.lua"))()
 local MainGui = Mercury:Create({
@@ -439,7 +442,7 @@ GunTab:Toggle({
 GunTab:Toggle({
 	Name = "Infinite Ammo",
 	StartingState = false,
-	Description = "1000 ammo constantly don't use wreckers yard",
+	Description = "1000 ammo constantly (don't use wreckers yard)",
 	Callback = function(Bool)
         TC2.Birb.Toggles.Ammo = Bool
     end
@@ -523,7 +526,7 @@ GunTab:Toggle({
 GunTab:Toggle({
 	Name = "Infinite Cloak",
 	StartingState = false,
-	Description = "Just by a cloak and dagger tbh",
+	Description = "Just buy a cloak and dagger tbh",
 	Callback = function(Bool)
         TC2.Birb.Toggles.Cloak = Bool
     end
@@ -663,8 +666,8 @@ MiscTab:Toggle({
         TC2.Birb.Toggles.AntiHead = Bool
     end
 })
-
-MiscTab:Toggle({
+--Broken
+--[[MiscTab:Toggle({
 	Name = "Deny Projectiles",
 	StartingState = false,
 	Description = "Ever hated projectiles? Kill anyone who directs one at you",
@@ -694,4 +697,4 @@ local DoFilter = function(Instance)
     end
 end
 
-workspace.Ray_Ignore.ChildAdded:Connect(DoFilter)
+workspace.Ray_Ignore.ChildAdded:Connect(DoFilter)]]
