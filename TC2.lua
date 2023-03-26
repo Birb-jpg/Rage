@@ -1,6 +1,6 @@
 --Created by Birb#7304
 --https://v3rmillion.net/member.php?action=profile&uid=783024
-
+return error("Patched for now")
 local AntiCheatHook
 AntiCheatHook = hookmetamethod(game,"__namecall",newcclosure(function(Self,...)
     local Args = {...}
