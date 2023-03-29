@@ -1,19 +1,19 @@
---Created by Birb#7304
---https://v3rmillion.net/member.php?action=profile&uid=783024
-return error("Patched for now")
-local AntiCheatHook
-AntiCheatHook = hookmetamethod(game,"__namecall",newcclosure(function(Self,...)
-    local Args = {...}
-    local Method = getnamecallmethod()
+--[[
+    [*] Info, [+] Update, [-] Removed, [>] Item
 
-    if Method == "FireServer" and not checkcaller() then
-        if typeof(Self) == "Instance" and (Self.Name == "empty" or Self.Name == "BeanBoozled") and typeof(Args[1]) == "string" and (Args[1]:lower():match("goodbye") or Args[1]:lower():match("error")) then
-            warn("Ban circumvented from remote:",Self.Name)
-            return wait(9e9)
-        end
-    end
-    return AntiCheatHook(Self,...)
-end))
+    [*] Created by Birb (https://v3rmillion.net/member.php?action=profile&uid=783024)
+    [*] v0.1.1
+    [*] Release
+    [-] Anti Headshot
+        [*] Not really useful
+    [-] Pickup Heal
+        [*] Serversided check for distance (not confirmed)
+    [+] Labled/Disabled Patched Functions
+        [>] Sap all (Unpatched?)
+    [TODO]
+        [>] Kill all
+        [>] Counter attack (Deny projectiles)
+]]--
 
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
@@ -24,13 +24,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
+local Status = Player.Status
+local Target
 
-local Target = nil
-
-
-local TC2 = {}
-TC2.Birb = {}
-TC2.Birb.Toggles = {
+local Birb = {}
+Birb.TC2 = {}
+Birb.Locals = {PackString = "", CurrentHitPart = nil}
+Birb.TC2.Toggles = {
+    KillAll = false,
     Ammo = false,
     FallDMG = false,
     FR = false,
@@ -45,11 +46,9 @@ TC2.Birb.Toggles = {
     Walkspeed = false,
     Wallbang = false,
     SilentAim = false,
-    --Aimlock = false,
     FOV = false,
     Vis = false,
     VisFOV = false,
-    --AimlockActive = false,
     Sap = false,
     Invis = false,
     Cloak = false,
@@ -58,86 +57,96 @@ TC2.Birb.Toggles = {
     Dot = false,
     AntiHead = false,
     HealyKit = false,
-    Projectile = false
+    CounterAttack = false
 }
-TC2.Birb.Changes = {
+Birb.TC2.Changes = {
     FireRate = 0,
     Recoil = 0,
     WS = 20,
     FOVRadius = 100
 }
-TC2.Birb.Frameworks = {}
-TC2.SetFramework = function(FrameWorkScan)
+Birb.TC2.Frameworks = {}
+Birb.TC2.SetFramework = function(FrameWorkScan)
     for i,v in next, getgc(true) do
         if typeof(v) == "table" then
             for a,b in next, FrameWorkScan do
-                if TC2.Birb.Frameworks[a] ~= nil then continue end
+                if Birb.TC2.Frameworks[a] ~= nil then continue end
                 if typeof(rawget(v,b)) == "function" then
-                    TC2.Birb.Frameworks[a] = v
+                    Birb.TC2.Frameworks[a] = v
                 end
             end
         end
     end
 end
 
-TC2.GetFramework = function(FrameWorkName)
-    return TC2.Birb.Frameworks[FrameWorkName]
+Birb.TC2.GetFramework = function(FrameWorkName)
+    return Birb.TC2.Frameworks[FrameWorkName]
 end
 
-
---[[local Visulaizer
-local Weapons
-for i,v in next, getgc(true) do
-    if typeof(v) == "table" then
-        if typeof(rawget(v,"speedupdate")) == "function" and Visulaizer == nil then
-            Visulaizer = v
-        end
-        if typeof(rawget(v,"returndamagemod")) == "function" and Weapons == nil then
-            Weapons = v
-        end
-    end
-end]]
-TC2.SetFramework({
+Birb.TC2.SetFramework({
     ["Visualizer"] = "speedupdate",
     ["Weapons"] = "returndamagemod",
     ["Client"] = "inducefalldamage",
     ["Inventory"] = "equipItem",
     --["ClassHandler"] = "runinvis"
 })
-local InstaHook = TC2.GetFramework("Weapons").returndamagemod
-TC2.GetFramework("Weapons").returndamagemod = function(...)
-    if TC2.Birb.Toggles.Insta == true then
+
+for i,v in next, getgc(true) do
+    if v and typeof(v) == "table" then
+        if rawget(v,"Debug") then
+            for a,b in next, debug.getproto(rawget(v,"Debug"),1,true) do
+                --print(a,debug.getupvalue(b,1))
+                debug.setupvalue(b,1,function()
+                    return task.wait(9e9)
+                end)
+            end
+        end
+        if rawget(v,"firebullet") then
+            for a,b in next, debug.getupvalues(rawget(v,"firebullet")) do
+                if typeof(b) == "Instance" and b.ClassName == "RemoteEvent" then
+                    Birb.Locals.CurrentHitPart = b --u2
+                    Birb.Locals.PackString = debug.getupvalue(rawget(v,"firebullet"),a-1) --u3
+                    Birb.Locals.DecodingTable = debug.getupvalue(rawget(v,"firebullet"),a-2) --table2
+                end
+            end 
+        end
+    end
+end
+print(Birb.Locals.DecodingTable)
+local InstaHook = Birb.TC2.GetFramework("Weapons").returndamagemod
+Birb.TC2.GetFramework("Weapons").returndamagemod = function(...)
+    if Birb.TC2.Toggles.Insta == true then
         return math.huge
     end
     return InstaHook(...)
 end
-local FDHook = TC2.GetFramework("Client").inducefalldamage
-TC2.GetFramework("Client").inducefalldamage = function(...)
-    if TC2.Birb.Toggles.FallDMG == true then
+local FDHook = Birb.TC2.GetFramework("Client").inducefalldamage
+Birb.TC2.GetFramework("Client").inducefalldamage = function(...)
+    if Birb.TC2.Toggles.FallDMG == true then
         return
     end
     return FDHook(...)
 end
 
-local SpreadHook = TC2.GetFramework("Weapons").calcspread
-TC2.GetFramework("Weapons").calcspread = function(...)
-    if TC2.Birb.Toggles.Spread == true then
+local SpreadHook = Birb.TC2.GetFramework("Weapons").calcspread
+Birb.TC2.GetFramework("Weapons").calcspread = function(...)
+    if Birb.TC2.Toggles.Spread == true then
         return CFrame.Angles(0,0,0)
     end
     return SpreadHook(...)
 end
-local CameraHook = TC2.GetFramework("Weapons").RotCamera
-TC2.GetFramework("Weapons").RotCamera = function(...)
-    if TC2.Birb.Toggles.Recoil == true then
+local CameraHook = Birb.TC2.GetFramework("Weapons").RotCamera
+Birb.TC2.GetFramework("Weapons").RotCamera = function(...)
+    if Birb.TC2.Toggles.Recoil == true then
         return
     end
     return CameraHook(...)
 end
 
-local SpeedHook = TC2.GetFramework("Visualizer").speedupdate
-TC2.GetFramework("Visualizer").speedupdate = function(...)
-    if TC2.Birb.Toggles.Walkspeed == true and Humanoid then
-        Humanoid.WalkSpeed = TC2.Birb.Changes.WS
+local SpeedHook = Birb.TC2.GetFramework("Visualizer").speedupdate
+Birb.TC2.GetFramework("Visualizer").speedupdate = function(...)
+    if Birb.TC2.Toggles.Walkspeed == true and Humanoid then
+        Humanoid.WalkSpeed = Birb.Changes.WS
         return
     end
     return SpeedHook(...)
@@ -149,73 +158,66 @@ end
 local Changing = {}
 local ValueChanger = function(ValueBase,Prop,Change,Enabler)
     if not Changing[ValueBase] then
-         if TC2.Birb.Toggles[Enabler] ~= nil then
+         if Birb.TC2.Toggles[Enabler] ~= nil then
             Changing[ValueBase] = ValueBase:GetPropertyChangedSignal(Prop):Connect(function()
-                if TC2.Birb.Toggles[Enabler] == true and ValueBase[Prop] ~= nil then
+                if Birb.TC2.Toggles[Enabler] == true and ValueBase[Prop] ~= nil then
                     ValueBase[Prop] = Change
                 end
             end)
         end
     else
         Changing[ValueBase]:Disconnect()
-        if TC2.Birb.Toggles[Enabler] ~= nil then
+        if Birb.TC2.Toggles[Enabler] ~= nil then
             Changing[ValueBase] = ValueBase:GetPropertyChangedSignal(Prop):Connect(function()
-                if TC2.Birb.Toggles[Enabler] == true then
-                    v[Prop] = Change
+                if Birb.TC2.Toggles[Enabler] == true then
+                    ValueBase[Prop] = Change
                 end
             end)
         end
     end
 end
 
-for i,v in next, TC2.GetFramework("Weapons") do
+for i,v in next, Birb.TC2.GetFramework("Weapons") do
     if i:match("ammocount") then
         ValueChanger(v,"Value",1000,"Ammo")
     end
 end
 
-ValueChanger(TC2.GetFramework("Weapons").secondaryduration,"Value",0,"Ammo")
-ValueChanger(TC2.GetFramework("Client").maxbaseball,"Value",1000,"Ammo")
-ValueChanger(TC2.GetFramework("Client").baseballs,"Value",1000,"Ammo")
-ValueChanger(TC2.GetFramework("Client").cloakleft,"Value",10,"Cloak")
-ValueChanger(TC2.GetFramework("Client").chargeleft,"Value",30,"Charge")
+ValueChanger(Birb.TC2.GetFramework("Weapons").secondaryduration,"Value",0,"Ammo")
+ValueChanger(Birb.TC2.GetFramework("Client").maxbaseball,"Value",1000,"Ammo")
+ValueChanger(Birb.TC2.GetFramework("Client").baseballs,"Value",1000,"Ammo")
+ValueChanger(Birb.TC2.GetFramework("Client").cloakleft,"Value",10,"Cloak")
+ValueChanger(Birb.TC2.GetFramework("Client").chargeleft,"Value",30,"Charge")
 
---ValueChanger(TC2.GetFramework("Weapons").metal,"Value",200,"Ammo")
 --ValueChanger(TC2.GetFramework("Weapons").chargetick,"Value",tick()+50,"Testing")
-
-local chegg = 0
-
 
 local OldIndex
 OldIndex = hookmetamethod(game,"__index",newcclosure(function(Self,Key)
     if Key == "Value" and Self:IsA("ValueBase") and not checkcaller() then
-        if Self.Name:lower():match("firerate") and TC2.Birb.Toggles.FR == true and Self.Parent:FindFirstChild("Projectile") == nil then
-            return TC2.Birb.Changes.FireRate
-        --[[elseif Self.Name:lower():match("RecoilControl") and TC2.Birb.Toggles.Recoil == true then
-            return TC2.Birb.Changes.Recoil]]
+        if Self.Name:lower():match("firerate") and Birb.TC2.Toggles.FR == true and Self.Parent:FindFirstChild("Projectile") == nil then
+            return Birb.TC2.Changes.FireRate
         end
     end
-    if Key == "Clips" and TC2.Birb.Toggles.Wallbang == true and not checkcaller() then
+    if Key == "Clips" and Birb.TC2.Toggles.Wallbang == true and not checkcaller() then
         return workspace.Map
     end
     return OldIndex(Self,Key)
 end))
 
 
-
 local FovCircle = Drawing.new("Circle")
 FovCircle.Transparency = 1
 FovCircle.Thickness = 2
-FovCircle.Radius = TC2.Birb.Changes.FOVRadius
+FovCircle.Radius = Birb.TC2.Changes.FOVRadius
 FovCircle.Filled = false
 FovCircle.Position = UIS:GetMouseLocation()
 FovCircle.Visible = false
 FovCircle.Color = Color3.fromRGB(255, 255, 255)
 
 local GetClosestToMouse = function(TargetPart)
-    print(TC2.Birb.Toggles.FOV and TC2.Birb.Changes.FOVRadius)
+    --print(Birb.TC2.Toggles.FOV and Birb.TC2.Changes.FOVRadius)
 
-    local MaxDistance = (TC2.Birb.Toggles.FOV and TC2.Birb.Changes.FOVRadius or nil)
+    local MaxDistance = (Birb.TC2.Toggles.FOV and Birb.TC2.Changes.FOVRadius or nil)
 	local Closest = 9e9
 	local ToRet
 	for i,v in next, Players:GetPlayers() do
@@ -239,7 +241,7 @@ local GetClosestToMouse = function(TargetPart)
 							ToRet = nil
 						end
 					end
-                    if TC2.Birb.Toggles.VisFOV == true then
+                    if Birb.TC2.Toggles.VisFOV == true then
                         if IsVisible == true then
                             Closest = Magnitude
 							ToRet = v.Character
@@ -248,7 +250,7 @@ local GetClosestToMouse = function(TargetPart)
                         end
                     end
                     local Map = workspace:FindFirstChild("Map")
-                    if TC2.Birb.Toggles.Vis == true and Selected and Map and Map:FindFirstChild("Ignore") then
+                    if Birb.TC2.Toggles.Vis == true and Selected and Map and Map:FindFirstChild("Ignore") then
                         if #Camera:GetPartsObscuringTarget({Selected.CFrame.Position}, Map.Ignore:GetChildren()) <= 0 then
                             Closest = Magnitude
 							ToRet = v.Character
@@ -263,38 +265,80 @@ local GetClosestToMouse = function(TargetPart)
 	return ToRet,Closest
 end
 
+local FireHitPart = function(v)
+    if not Birb.TC2.GetFramework("Client").gun.Value then return end
+    local PackValues = {
+        PosX = v.Hitbox.CFrame.X,
+        PosY = v.Hitbox.CFrame.Y,
+        PosZ = v.Hitbox.CFrame.Z,
+        HPPX = v.Hitbox.CFrame.Position.X,
+        HPPY = v.Hitbox.CFrame.Position.Y,
+        HPPZ = v.Hitbox.CFrame.Position.Z,
+        HPX = v.Hitbox.CFrame.Position.X,
+        HPY = v.Hitbox.CFrame.Position.Y,
+        HPZ = v.Hitbox.CFrame.Position.Z,
+        gunname = Birb.TC2.GetFramework("Client").gun.Value.Name,
+        damage = 2000,
+        head = 0,
+        range = 1000,
+        distance = 0,
+        backstab = 0,
+        critb = 0,
+        mcrit = 0,
+        metal = 0,
+        time = workspace.Status.ServerStats.DistributedTime.Value,
+        penetrated = 1,
+        boom = 0,
+        marketgarden = 0,
+        ping = Player.Ping.Value,
+        mg = 0,
+        damagemodifier = 0,
+        gf = "",
+        ts = 6,
+        bdm = 2000
+    }
+    local PackIn = {}
+    for i,v in next, Birb.Locals.DecodingTable do
+        PackIn[i] = PackValues[v[1]]
+    end
+    local Gun = Character:FindFirstChild("Gun")
+    if Gun then
+        --Birb.Locals.CurrentHitPart:FireServer(v.Hitbox,Gun,string.pack(Birb.Locals.PackString,table.unpack(PackIn)),string.pack("f", 1),string.pack("f", 0))
+    end
+end
 
 RunService:BindToRenderStep("Runeasd", 1, function()
     --[[if Player.Character ~= nil and Player.Character:FindFirstChild("Dead") then
         local Dead = Player.Character:FindFirstChild("Dead")
         if Dead.Value == true then
             ReplicatedStorage.Events.LoadCharacter:FireServer()
-            TC2.GetFramework("Client").setcharacter(Player)
+            Birb.TC2.GetFramework("Client").setcharacter(Player)
             Dead.Value = false
         end
     end]]
-    if TC2.Birb.Toggles.Healy == true and Character and Character:FindFirstChild("Gun") and Character.Gun:FindFirstChild("effect") and Character.Gun.effect:FindFirstChild("hp") and Character:FindFirstChild("Humanoid") and Character.Humanoid.Health < Character.Humanoid.MaxHealth then
+    if Birb.TC2.Toggles.KillAll == true then
+        for _,Targeted in next, game.Players:GetPlayers() do
+            if Targeted and Targeted.Character and Targeted.Character:FindFirstChild("Hitbox") and Targeted.Team ~= Player.Team and Targeted.Character:FindFirstChild("Humanoid") and Targeted.Character:FindFirstChild("Humanoid").Health > 0 then
+                --FireHitPart(Targeted.Character)
+            end
+        end
+    end
+    if Birb.TC2.Toggles.Healy == true and Character and Character:FindFirstChild("Gun") and Character.Gun:FindFirstChild("effect") and Character.Gun.effect:FindFirstChild("hp") and Character:FindFirstChild("Humanoid") and Character.Humanoid.Health < Character.Humanoid.MaxHealth then
         ReplicatedStorage.Events.LoseHealth:FireServer(-500)
     end
-    if TC2.Birb.Toggles.HealyKit == true and Character and Character:FindFirstChild("Hitbox") and Character:FindFirstChild("Humanoid") and Character.Humanoid.Health < Character.Humanoid.MaxHealth and Character:FindFirstChild("Dead") and Character.Dead.Value == false then
-        for i,v in next, CollectionService:GetTagged("Touched") do
-            if v.Name:match("HP") or v.Parent.Name:match("Resupply") and Character:FindFirstChild("Humanoid") then
-                ReplicatedStorage.Events.Touched:FireServer(v,Character.Hitbox)
+	if Birb.TC2.Toggles.Sap == true then
+        for i,v in next, getrenv()._G.BuildingsOOP do
+            if v and rawget(v,"BldgObjs") then
+                local BldgData = rawget(v,"BldgObjs")
+                local TeamColor = BldgData.TeamColor3.BrickColor
+                if TeamColor ~= Player.TeamColor and Birb.TC2.GetFramework("Client").gun.Value then
+                    --FireHitPart(BldgData)
+                end
             end
-        end
-    end
-    if TC2.Birb.Toggles.Sap == true then
-        for i,v in next, CollectionService:GetTagged("HasHealth") do
-            if v:FindFirstChild("IsABldg") and v.TeamColor3.BrickColor ~= Player.TeamColor then
-                local Gun = Character:FindFirstChild("Gun")
-                local PackValues = {v.Hitbox.CFrame.X,v.Hitbox.CFrame.Y,v.Hitbox.CFrame.Z,v.Hitbox.CFrame.X,v.Hitbox.CFrame.Y,v.Hitbox.CFrame.Z,v.Hitbox.CFrame.X,v.Hitbox.CFrame.Y,v.Hitbox.CFrame.Z,TC2.GetFramework("Client").gun.Value.Name,500,0,99999999,0,0,0,0,0,workspace.Status.ServerStats.DistributedTime.Value,1,0,0,Player.Ping.Value,0,0}
-                ReplicatedStorage.Events.HitCrud:FireServer(v.Hitbox,Gun,string.pack("f f f f f f f f f s f i1 f f i1 i1 f f f f f f f f",table.unpack(PackValues)))
-            end
-        end
+        end    
     end
     FovCircle.Position = UIS:GetMouseLocation()
     Target = GetClosestToMouse()
-    --warn(Target)
 end)
 local OldNameCall
 OldNameCall = hookmetamethod(game,"__namecall",newcclosure(function(Self,...)
@@ -303,28 +347,28 @@ OldNameCall = hookmetamethod(game,"__namecall",newcclosure(function(Self,...)
     if Method == "FireServer" and not checkcaller() then
         if typeof(Self) == "Instance" then
             if Self.IsA(Self,"RemoteEvent") then
-                if Self.Name == "DeployBuilding" and TC2.Birb.Toggles.Level3 == true then
+                if Self.Name == "DeployBuilding" and Birb.TC2.Toggles.Level3 == true then
                     return Self.FireServer(Self,Args[1],Args[2],true,3,216,200,200,0,0,Args[10])
                 end
-                if Self.Name == "ReplicateDot" and TC2.Birb.Toggles.Dot == true then
+                if Self.Name == "ReplicateDot" and Birb.TC2.Toggles.Dot == true then
                     return
                 end
-                if Self.Name == "ControlTurn" and TC2.Birb.Toggles.AntiHead == true then
-                    return Self.FireServer(Self,math.rad(160))
-                end
-                if Self.Name == "IMISSED" and TC2.Birb.Toggles.SelfDMG == true then
+                if Self.Name == "UpdateMetal2" and Birb.TC2.Toggles.Ammo == true then
                     return
                 end
-                if Self.Name == "Undisguise" and TC2.Birb.Toggles.Undisguise == true then
+                if Self.Name == "IMISSED" and Birb.TC2.Toggles.SelfDMG == true then
+                    return
+                end
+                if Self.Name == "Undisguise" and Birb.TC2.Toggles.Undisguise == true then
                     return
                 end
             end
         end 
     end
    if Method == "Raycast" and not checkcaller() then
-        if Target ~= nil and Target.FindFirstChild(Target,"Head") and TC2.Birb.Toggles.SilentAim == true then
+        if Target ~= nil and Target.FindFirstChild(Target,"Head") and Birb.TC2.Toggles.SilentAim == true then
             if Args[3].IgnoreWater == true then
-                print(Target)
+                --print(Target)
                 Args[1] = Camera.CFrame.Position
                 Args[2] = Target.Head.CFrame.Position - Camera.CFrame.Position
                 return OldNameCall(Self,unpack(Args))
@@ -364,30 +408,12 @@ local MiscTab = MainGui:Tab({
 	Icon = "rbxassetid://10321892327"
 })
 
---[[AimTab:Toggle({
-	Name = "Toggle Aimlock",
-	StartingState = false,
-	Description = "Mouse move to the target head you click head, simple",
-	Callback = function(Bool)
-        TC2.Birb.Toggles.Aimlock = Bool
-    end
-})
-
-AimTab:KeyBind({
-	Name = "Aimlock Keybind",
-	Keybind = Enum.KeyCode.V,
-	Description = "Use this keybind to activate the aimlock",
-    Callback = function(Bool)
-        TC2.Birb.Toggles.AimlockActive = not TC2.Birb.Toggles.AimlockActive
-    end
-})]]
-
 AimTab:Toggle({
 	Name = "Toggle Silent Aim",
 	StartingState = false,
 	Description = "Bullets go towards the targets's head when you shoot",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.SilentAim = Bool
+        Birb.TC2.Toggles.SilentAim = Bool
     end
 })
 
@@ -397,7 +423,7 @@ AimTab:Toggle({
 	Description = "Only lock onto the target inside the circle on screen",
 	Callback = function(Bool)
         FovCircle.Visible = Bool
-        TC2.Birb.Toggles.FOV = Bool
+        Birb.TC2.Toggles.FOV = Bool
     end
 })
 
@@ -407,7 +433,7 @@ AimTab:Slider({
 	Min = 50,
 	Max = 1000,
 	Callback = function(Value)
-        TC2.Birb.Changes.FOVRadius = Value
+        Birb.TC2.Changes.FOVRadius = Value
         FovCircle.Radius =Value
     end
 })
@@ -417,7 +443,7 @@ AimTab:Toggle({
 	StartingState = false,
 	Description = "Check if the target is behind a wall",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.Vis = Bool
+        Birb.TC2.Toggles.Vis = Bool
     end
 })
 
@@ -426,7 +452,7 @@ AimTab:Toggle({
 	StartingState = false,
 	Description = "Checks if the target is in your FOV so you don't kill a dude behind you",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.VisFOV = Bool
+        Birb.TC2.Toggles.VisFOV = Bool
     end
 })
 
@@ -436,7 +462,7 @@ GunTab:Toggle({
 	StartingState = false,
 	Description = "Any mechanic build is automatically placed as a level 3",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.Level3 = Bool
+        Birb.TC2.Toggles.Level3 = Bool
     end
 })
 GunTab:Toggle({
@@ -444,7 +470,7 @@ GunTab:Toggle({
 	StartingState = false,
 	Description = "1000 ammo constantly (don't use wreckers yard)",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.Ammo = Bool
+        Birb.TC2.Toggles.Ammo = Bool
     end
 })
 GunTab:Toggle({
@@ -452,7 +478,7 @@ GunTab:Toggle({
 	StartingState = false,
 	Description = "Firerate for bullet based (hitscan) guns is increased significantly",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.FR = Bool
+        Birb.TC2.Toggles.FR = Bool
     end
 })
 GunTab:Toggle({
@@ -460,7 +486,7 @@ GunTab:Toggle({
 	StartingState = false,
 	Description = "Gun spread is no longer calculated",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.Spread = Bool
+        Birb.TC2.Toggles.Spread = Bool
     end
 })
 GunTab:Toggle({
@@ -468,7 +494,7 @@ GunTab:Toggle({
 	StartingState = false,
 	Description = "Damage goes to infinity",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.Insta = Bool
+        Birb.TC2.Toggles.Insta = Bool
     end
 })
 GunTab:Toggle({
@@ -476,7 +502,7 @@ GunTab:Toggle({
 	StartingState = false,
 	Description = "No gun recoil",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.Recoil = Bool
+        Birb.TC2.Toggles.Recoil = Bool
     end
 })
 GunTab:Toggle({
@@ -484,7 +510,7 @@ GunTab:Toggle({
 	StartingState = false,
 	Description = "Self damage from melee is negated",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.SelfDMG = Bool
+        Birb.TC2.Toggles.SelfDMG = Bool
     end
 })
 GunTab:Toggle({
@@ -492,8 +518,8 @@ GunTab:Toggle({
 	StartingState = false,
 	Description = "Allow for facestabs (360 backstab)",
 	Callback = function(Bool)
-        TC2.GetFramework("Weapons").backstabangle = 180
-        if Bool then TC2.GetFramework("Weapons").backstabangle = 360 end
+        Birb.TC2.GetFramework("Weapons").backstabangle = 180
+        if Bool then Birb.TC2.GetFramework("Weapons").backstabangle = 360 end
     end
 })
 --[[GunTab:Toggle({
@@ -501,7 +527,7 @@ GunTab:Toggle({
 	StartingState = false,
 	Description = "Toggle testing features",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.Testing = Bool
+        Birb.TC2.Toggles.Testing = Bool
     end
 })
 ]]
@@ -510,7 +536,7 @@ GunTab:Toggle({
 	StartingState = false,
 	Description = "Shoot through walls",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.Wallbang = Bool
+        Birb.TC2.Toggles.Wallbang = Bool
     end
 })
 
@@ -519,7 +545,7 @@ GunTab:Toggle({
 	StartingState = false,
 	Description = "You have to run into a wall to stop charging lol",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.Charge = Bool
+        Birb.TC2.Toggles.Charge = Bool
     end
 })
 
@@ -528,7 +554,7 @@ GunTab:Toggle({
 	StartingState = false,
 	Description = "Just buy a cloak and dagger tbh",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.Cloak = Bool
+        Birb.TC2.Toggles.Cloak = Bool
     end
 })
 
@@ -537,7 +563,7 @@ GunTab:Toggle({
 	StartingState = false,
 	Description = "Removes the dot when aiming with a sniper",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.Dot = Bool
+        Birb.TC2.Toggles.Dot = Bool
     end
 })
 
@@ -546,7 +572,7 @@ CharacterTab:Toggle({
 	StartingState = false,
 	Description = "Don't take fall damage",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.FallDMG = Bool
+        Birb.TC2.Toggles.FallDMG = Bool
     end
 })
 do
@@ -568,9 +594,7 @@ CharacterTab:Toggle({
 	StartingState = false,
 	Description = "Respawn instantly after killcam",
 	Callback = function(Bool)
-        local Const76,Const75 = Bool and 2000 or 2.5,Bool and 0 or 0.25
-        setconstant(TC2.GetFramework("Client").died200,76,Const76) 
-        setconstant(TC2.GetFramework("Client").died200,75,Const75) 
+
     end
 })
 CharacterTab:Toggle({
@@ -578,7 +602,7 @@ CharacterTab:Toggle({
 	StartingState = false,
 	Description = "As Agent when disguise you don't undisguise when shooting",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.Undisguise = Bool
+        Birb.TC2.Toggles.Undisguise = Bool
     end
 })
 CharacterTab:Toggle({
@@ -587,7 +611,7 @@ CharacterTab:Toggle({
 	Description = "Enable your jumppower to be set to the slider value",
 	Callback = function(Bool)
         Humanoid.UseJumpPower = Bool
-        TC2.Birb.Toggles.Jumppow = Bool
+        Birb.TC2.Toggles.Jumppow = Bool
     end
 })
 CharacterTab:Slider({
@@ -596,7 +620,7 @@ CharacterTab:Slider({
 	Min = 0,
 	Max = 1000,
 	Callback = function(Value)
-        ValueChanger(TC2.GetFramework("Client").JP,"Value",Value,"Jumppow")
+        ValueChanger(Birb.TC2.GetFramework("Client").JP,"Value",Value,"Jumppow")
     end
 })
 
@@ -605,8 +629,8 @@ CharacterTab:Toggle({
 	StartingState = false,
 	Description = "Enable your walkspeed to be set to the slider value",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.Walkspeed = Bool
-        Humanoid.WalkSpeed = TC2.Birb.Changes.WS
+        Birb.TC2.Toggles.Walkspeed = Bool
+        Humanoid.WalkSpeed = Birb.TC2.Changes.WS
     end
 })
 CharacterTab:Slider({
@@ -615,86 +639,45 @@ CharacterTab:Slider({
 	Min = 0,
 	Max = 1000,
 	Callback = function(Value)
-        TC2.Birb.Changes.WS = Value
-        Humanoid.WalkSpeed = TC2.Birb.Changes.WS
+        Birb.TC2.Changes.WS = Value
+        Humanoid.WalkSpeed = Birb.TC2.Changes.WS
     end
 })
 
-MiscTab:Toggle({
+--[[MiscTab:Toggle({
 	Name = "Sap All",
 	StartingState = false,
 	Description = 'Saps (Kills) all buildings',
 	Callback = function(Bool)
-        TC2.Birb.Toggles.Sap = Bool
-        if Bool == true then
-            for i,v in next, CollectionService:GetTagged("HasHealth") do
-                if v:FindFirstChild("IsABldg") and v.TeamColor3.BrickColor ~= Player.TeamColor then
-                    local Gun = Character:FindFirstChild("Gun")
-                    local PackValues = {v.Hitbox.CFrame.X,v.Hitbox.CFrame.Y,v.Hitbox.CFrame.Z,v.Hitbox.CFrame.X,v.Hitbox.CFrame.Y,v.Hitbox.CFrame.Z,v.Hitbox.CFrame.X,v.Hitbox.CFrame.Y,v.Hitbox.CFrame.Z,TC2.GetFramework("Client").gun.Value.Name,10000,0,99999999,0,0,0,0,0,workspace.Status.ServerStats.DistributedTime.Value,1,0,0,Player.Ping.Value,0,0}
-                    ReplicatedStorage.Events.HitCrud:FireServer(v.Hitbox,Gun,string.pack("f f f f f f f f f s f i1 f f i1 i1 f f f f f f f f",table.unpack(PackValues)))
-                end
-            end
-        end
+        Birb.TC2.Toggles.Sap = Bool
     end
 })
+]]
+--[[MiscTab:Toggle({
+	Name = "Kill All",
+	StartingState = false,
+	Description = 'Kill all enemies',
+	Callback = function(Bool)
+        Birb.TC2.Toggles.KillAll = Bool
+    end
+})]]
 
 MiscTab:Toggle({
 	Name = "Food Heal",
 	StartingState = false,
-	Description = "A scuffed godmode you need a item like/or brash burger in your hand",
+	Description = "A scuffed godmode you need a item like brash burger in your hand",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.Healy = Bool
-    end
-})
-
-MiscTab:Toggle({
-	Name = "Pickup Heal",
-	StartingState = false,
-	Description = "Another scuffed godmode picks up medkits around the map",
-	Callback = function(Bool)
-        TC2.Birb.Toggles.HealyKit = Bool
+        Birb.TC2.Toggles.Healy = Bool
     end
 })
 
 
-MiscTab:Toggle({
-	Name = "Anti Headshot",
-	StartingState = false,
-	Description = "Only useful against marksman",
-	Callback = function(Bool)
-        ReplicatedStorage.Events.ControlTurn:FireServer(math.rad(180))
-        TC2.Birb.Toggles.AntiHead = Bool
-    end
-})
---Broken
 --[[MiscTab:Toggle({
-	Name = "Deny Projectiles",
+	Name = "Counter Attack",
 	StartingState = false,
-	Description = "Ever hated projectiles? Kill anyone who directs one at you",
+	Description = "Any damage done to you kills the attacker",
 	Callback = function(Bool)
-        TC2.Birb.Toggles.Projectile = Bool
+        Birb.TC2.Toggles.CounterAttack = Bool
     end
 })
-
-local DoFilter = function(Instance)
-    if (Instance.Name == "Rocket" or Instance.Name == "Grenade"  or Instance.Name == "Baseball")and Instance.BrickColor ~= Player.TeamColor and Instance:FindFirstChild("Owner") and TC2.Birb.Toggles.Projectile == true then
-        task.spawn(function()
-            while Instance ~= nil do
-                task.wait()
-                if (Character.HumanoidRootPart.Position - Instance.Position).Magnitude < 30 then
-                    print(("%s's projectile got close"):format(Instance.Owner.Value.Name))
-                    if Instance.Owner.Value and Instance.Owner.Value.Character and Instance.Owner.Value.Character:FindFirstChild("Hitbox") and Instance:FindFirstChild("NT") and Character:FindFirstChild("Gun") then
-                        v = Instance.Owner.Value.Character
-
-                        local Gun = Character:FindFirstChild("Gun")
-                        local PackValues = {v.Hitbox.CFrame.X,v.Hitbox.CFrame.Y,v.Hitbox.CFrame.Z,v.Hitbox.CFrame.X,v.Hitbox.CFrame.Y,v.Hitbox.CFrame.Z,v.Hitbox.CFrame.X,v.Hitbox.CFrame.Y,v.Hitbox.CFrame.Z,TC2.GetFramework("Client").gun.Value.Name,10000,0,99999999,0,0,0,0,0,workspace.Status.ServerStats.DistributedTime.Value,1,0,0,Player.Ping.Value,0,0}
-                        ReplicatedStorage.Events.HitCrud:FireServer(v.Hitbox,Gun,string.pack("f f f f f f f f f s f i1 f f i1 i1 f f f f f f f f",table.unpack(PackValues)))
-                    end
-                    break
-                end
-            end
-        end)
-    end
-end
-
-workspace.Ray_Ignore.ChildAdded:Connect(DoFilter)]]
+]]
