@@ -662,6 +662,7 @@ CharacterTab:Slider({
     end
 })]]
 
+--[[
 MiscTab:Toggle({
 	Name = "Food Heal",
 	StartingState = false,
@@ -670,6 +671,7 @@ MiscTab:Toggle({
         Birb.TC2.Toggles.Healy = Bool
     end
 })
+]]
 
 
 --[[MiscTab:Toggle({
