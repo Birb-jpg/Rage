@@ -2,14 +2,16 @@
     [*] Info, [+] Update, [-] Removed, [>] Item
 
     [*] Created by Birb (https://v3rmillion.net/member.php?action=profile&uid=783024)
-    [*] v0.1.1
+    [*] v0.1.2
     [*] Release
+    [-] Food Heal
+        [*] Probably bans you if you spam the remote
     [-] Anti Headshot
         [*] Not really useful
     [-] Pickup Heal
         [*] Serversided check for distance (not confirmed)
     [+] Labled/Disabled Patched Functions
-        [>] Sap all (Unpatched?)
+        [>] Sap all (Unpatched?) (I Lied)
     [TODO]
         [>] Kill all
         [>] Counter attack (Deny projectiles)
@@ -28,9 +30,12 @@ local Status = Player.Status
 local Target
 
 local Birb = {}
-Birb.TC2 = {}
 Birb.Locals = {PackString = "", CurrentHitPart = nil}
+
+Birb.TC2 = {}
+Birb.TC2.Globals = getrenv()._G
 Birb.TC2.Toggles = {
+    Respawn = false,
     KillAll = false,
     Ammo = false,
     FallDMG = false,
@@ -307,15 +312,19 @@ local FireHitPart = function(v)
     end
 end
 
-RunService:BindToRenderStep("Runeasd", 1, function()
-    --[[if Player.Character ~= nil and Player.Character:FindFirstChild("Dead") then
+RunService:BindToRenderStep("lol", 1, function()
+    if Player.Character ~= nil and Player.Character:FindFirstChild("Dead") then
         local Dead = Player.Character:FindFirstChild("Dead")
-        if Dead.Value == true then
-            ReplicatedStorage.Events.LoadCharacter:FireServer()
-            Birb.TC2.GetFramework("Client").setcharacter(Player)
+        if Dead.Value == true and Birb.TC2.Toggles.Respawn == true and Status.Team.Value ~= "Spectator" then
             Dead.Value = false
+            task.wait(.2)
+            ReplicatedStorage.Events.LoadCharacter:FireServer()
+            Birb.TC2.GetFramework("Client").setcharacter()
+            Birb.TC2.GetFramework("Client").scfed.Value = 0
+            task.wait(.2)
+            Birb.TC2.GetFramework("Client").setcharacter()
         end
-    end]]
+    end
     if Birb.TC2.Toggles.KillAll == true then
         for _,Targeted in next, game.Players:GetPlayers() do
             if Targeted and Targeted.Character and Targeted.Character:FindFirstChild("Hitbox") and Targeted.Team ~= Player.Team and Targeted.Character:FindFirstChild("Humanoid") and Targeted.Character:FindFirstChild("Humanoid").Health > 0 then
@@ -380,7 +389,7 @@ end))
 
 local Mercury = loadstring(game:HttpGet("https://raw.githubusercontent.com/deeeity/mercury-lib/master/src.lua"))()
 local MainGui = Mercury:Create({
-    Name = "TC2 Birb Breaker",
+    Name = "Birb Breaker v0.1.2",
     Size = UDim2.fromOffset(600, 400),
     Theme = Mercury.Themes.Dark,
     Link = "https://github.com/deeeity/mercury-lib"
@@ -592,9 +601,9 @@ end
 CharacterTab:Toggle({
 	Name = "Instant Respawn",
 	StartingState = false,
-	Description = "Respawn instantly after killcam",
+	Description = "Respawn instantly",
 	Callback = function(Bool)
-
+        Birb.TC2.Toggles.Respawn = Bool
     end
 })
 CharacterTab:Toggle({
@@ -660,9 +669,8 @@ CharacterTab:Slider({
 	Callback = function(Bool)
         Birb.TC2.Toggles.KillAll = Bool
     end
-})]]
+})
 
---[[
 MiscTab:Toggle({
 	Name = "Food Heal",
 	StartingState = false,
@@ -672,7 +680,6 @@ MiscTab:Toggle({
     end
 })
 ]]
-
 
 --[[MiscTab:Toggle({
 	Name = "Counter Attack",
