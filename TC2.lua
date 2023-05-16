@@ -27,6 +27,7 @@ local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local Status = Player.Status
+local CurrentlyHolding = Player.PlayerGui.GUI.Client.Variables.equipped.Value
 local Target
 
 local Birb = {}
@@ -348,6 +349,7 @@ RunService:BindToRenderStep("lol", 1, function()
     end
     FovCircle.Position = UIS:GetMouseLocation()
     Target = GetClosestToMouse()
+    CurrentlyHolding = Player.PlayerGui.GUI.Client.Variables.equipped.Value
 end)
 local OldNameCall
 OldNameCall = hookmetamethod(game,"__namecall",newcclosure(function(Self,...)
@@ -375,7 +377,7 @@ OldNameCall = hookmetamethod(game,"__namecall",newcclosure(function(Self,...)
         end 
     end
    if Method == "Raycast" and not checkcaller() then
-        if Target ~= nil and Target.FindFirstChild(Target,"Head") and Birb.TC2.Toggles.SilentAim == true then
+        if Target ~= nil and Target.FindFirstChild(Target,"Head") and Birb.TC2.Toggles.SilentAim == true and CurrentlyHolding ~= "melee" then
             if Args[3].IgnoreWater == true then
                 --print(Target)
                 Args[1] = Camera.CFrame.Position
